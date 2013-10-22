@@ -96,6 +96,14 @@ class puppet::server::config inherits puppet::config {
       require => File[$puppet::server_envs_dir],
     }
 
+    # git pre hook to check syntax
+    file { "${puppet::server_git_repo_path}/hooks/${puppet::server_pre_hook_name}":
+      content => template($puppet::server_pre_hook_content),
+      owner   => $puppet::server_user,
+      mode    => '0755',
+      require => Git::Repo['puppet_repo'],
+    }
+
     # git post hook to auto generate an environment per branch
     file { "${puppet::server_git_repo_path}/hooks/${puppet::server_post_hook_name}":
       content => template($puppet::server_post_hook_content),

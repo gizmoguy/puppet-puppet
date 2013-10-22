@@ -65,6 +65,8 @@ class puppet::params {
   # Path to the repository
   $server_git_repo_path       = "${server_vardir}/puppet.git"
   # Override these if you need your own hooks
+  $server_pre_hook_content    = 'puppet/server/pre-commit.erb'
+  $server_pre_hook_name       = 'pre-commit'
   $server_post_hook_content   = 'puppet/server/post-receive.erb'
   $server_post_hook_name      = 'post-receive'
 
