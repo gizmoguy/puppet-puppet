@@ -34,14 +34,26 @@
 # $runmode::                       Select the mode to setup the puppet agent.
 #                                  Can be either 'cron' or 'service'.
 #
+# $cron_cmd::                      Specify command to launch when runmode is
+#                                  set 'cron'.
+#
 # $agent_noop::                    Run the agent in noop mode.
 #                                  type:boolean
 #
 # $show_diff::                     Show and report changed files with diff output
 #
+# $configtimeout::                 How long the client should wait for the
+#                                  configuration to be retrieved before
+#                                  considering it a failure.
+#                                  type:integer
+#
 # $ca_server::                     Use a different ca server. Should be either
 #                                  a string with the location of the ca_server
 #                                  or 'false'.
+#
+# $classfile::                     The file in which puppet agent stores a list
+#                                  of the classes associated with the retrieved
+#                                  configuration.
 #
 # $agent_template::                Use a custom template for the agent puppet
 #                                  configuration.
@@ -131,6 +143,8 @@
 #
 # $server_package::                Custom package name for puppet master
 #
+# $server_certname::               The name to use when handling certificates.
+#
 # === Advanced server parameters:
 #
 # $server_httpd_service::          Apache/httpd service name to notify
@@ -207,9 +221,12 @@ class puppet (
   $splay                       = $puppet::params::splay,
   $runinterval                 = $puppet::params::runinterval,
   $runmode                     = $puppet::params::runmode,
+  $cron_cmd                    = $puppet::params::cron_cmd,
   $agent_noop                  = $puppet::params::agent_noop,
   $show_diff                   = $puppet::params::show_diff,
+  $configtimeout               = $puppet::params::configtimeout,
   $ca_server                   = $puppet::params::ca_server,
+  $classfile                   = $puppet::params::classfile,
   $agent_template              = $puppet::params::agent_template,
   $auth_template               = $puppet::params::auth_template,
   $nsauth_template             = $puppet::params::nsauth_template,
@@ -245,6 +262,7 @@ class puppet (
   $server_app_root             = $puppet::params::server_app_root,
   $server_ssl_dir              = $puppet::params::server_ssl_dir,
   $server_package              = $puppet::params::server_package,
+  $server_certname             = $puppet::params::server_certname,
   $server_enc_api              = $puppet::params::server_enc_api,
   $server_report_api           = $puppet::params::server_report_api,
   $server_foreman_url          = $foreman::params::foreman_url,

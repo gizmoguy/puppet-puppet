@@ -14,9 +14,12 @@ class puppet::params {
   $splay               = false
   $runinterval         = '1800'
   $runmode             = 'service'
+  $cron_cmd            = undef
   $agent_noop          = false
   $show_diff           = false
+  $configtimeout       = 120
   $ca_server           = undef
+  $classfile           = '$vardir/classes.txt'
 
   # Need your own config templates? Specify here:
   $agent_template  = 'puppet/puppet.conf.erb'
@@ -35,6 +38,7 @@ class puppet::params {
   $server_external_nodes     = '/etc/puppet/node.rb'
   $server_enc_api            = 'v2'
   $server_report_api         = 'v2'
+  $server_certname           = $::clientcert
 
   # Need a new master template for the server?
   $server_template = 'puppet/server/puppet.conf.erb'
@@ -88,10 +92,6 @@ class puppet::params {
     /(Debian|Ubuntu)/ => ['puppet-common','puppet'],
     default           => ['puppet'],
   }
-
-  # This only applies to puppet::cron
-  $cron_range          = 60 # the maximum value for our cron
-  $cron_interval       = 2  # the amount of values within the $cron_range
 
   # Only use 'puppet cert' on versions where puppetca no longer exists
   if versioncmp($::puppetversion, '3.0') < 0 {

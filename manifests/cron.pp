@@ -5,10 +5,18 @@ class puppet::cron inherits puppet::service {
     ensure => stopped,
   }
 
+  $command = $puppet::cron_cmd ? {
+    undef   => "/usr/bin/env puppet agent --config ${puppet::dir}/puppet.conf --onetime --no-daemonize",
+    default => $puppet::cron_cmd,
+  }
+
+  $times = ip_to_cron($puppet::runinterval)
+
   cron { 'puppet':
-    command => "/usr/bin/env puppet agent --config ${puppet::dir}/puppet.conf --onetime --no-daemonize",
+    command => $command,
     user    => root,
-    minute  => ip_to_cron($puppet::cron_interval, $puppet::cron_range),
+    hour    => $times[0],
+    minute  => $times[1],
   }
 
 }
