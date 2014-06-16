@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe 'puppet' do
+describe 'puppet::agent' do
 
   let :facts do {
     :clientcert             => 'puppetmaster.example.com',
@@ -11,26 +11,21 @@ describe 'puppet' do
   } end
 
   describe 'with no custom parameters' do
-    it { should contain_class('puppet::config') }
+    let :pre_condition do
+      "class {'puppet': agent => true}"
+    end
+    it { should contain_class('puppet::agent::install') }
+    it { should contain_class('puppet::agent::config') }
+    it { should contain_class('puppet::agent::service') }
     it { should contain_file('/etc/puppet').with_ensure('directory') }
     it { should contain_file('/etc/puppet/puppet.conf') }
     it { should contain_package('puppet').with_ensure('present') }
-  end
-
-  describe 'with empty ca_server' do
-    let :params do {
-      :ca_server => '',
-    } end
-
-    it { should_not contain_concat_fragment('puppet.conf+10-main').with_content(/ca_server/) }
-  end
-
-  describe 'with ca_server' do
-    let :params do {
-      :ca_server => 'ca.example.org',
-    } end
-
-    it { should contain_concat_fragment('puppet.conf+10-main').with_content(/^\s+ca_server\s+= ca.example.org$/) }
+    it do
+      should contain_concat_fragment('puppet.conf+20-agent').
+        with_content(/^\[agent\]/).
+        with({})
+    end
   end
 
 end
+

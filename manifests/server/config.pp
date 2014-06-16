@@ -81,11 +81,6 @@ class puppet::server::config inherits puppet::config {
     # need to chown the $vardir before puppet does it, or else
     # we can't write puppet.git/ on the first run
 
-    file { $puppet::server_vardir:
-      ensure => directory,
-      owner  => $puppet::server_user,
-    }
-
     include git
 
     git::repo { 'puppet_repo':
@@ -94,6 +89,8 @@ class puppet::server::config inherits puppet::config {
       user    => $puppet::server_user,
       require => File[$puppet::server_envs_dir],
     }
+
+    $git_branch_map = $puppet::server_git_branch_map
 
     # git pre hook to check syntax
     file { "${puppet::server_git_repo_path}/hooks/${puppet::server_pre_hook_name}":
@@ -122,6 +119,7 @@ class puppet::server::config inherits puppet::config {
       ensure  => present,
       replace => false,
       content => "# Empty site.pp required (puppet #15106, foreman #1708)\n",
+      mode    => '0644',
     }
 
     # setup empty directories for our environments

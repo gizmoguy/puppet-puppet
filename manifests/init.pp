@@ -37,9 +37,6 @@
 # $cron_cmd::                      Specify command to launch when runmode is
 #                                  set 'cron'.
 #
-# $agent_noop::                    Run the agent in noop mode.
-#                                  type:boolean
-#
 # $show_diff::                     Show and report changed files with diff output
 #
 # $configtimeout::                 How long the client should wait for the
@@ -55,13 +52,24 @@
 #                                  of the classes associated with the retrieved
 #                                  configuration.
 #
-# $agent_template::                Use a custom template for the agent puppet
-#                                  configuration.
-#
 # $auth_template::                 Use a custom template for the auth
 #                                  configuration.
 #
 # $nsauth_template::               Use a custom template for the nsauth configuration.
+#
+# $main_template::                 Use a custom template for the main puppet
+#                                  configuration.
+#
+# == puppet::agent parameters
+#
+# $agent::                         Should a puppet agent be installed
+#                                  type:boolean
+#
+# $agent_noop::                    Run the agent in noop mode.
+#                                  type:boolean
+#
+# $agent_template::                Use a custom template for the agent puppet
+#                                  configuration.
 #
 # $client_package::                Install a custom package to provide
 #                                  the puppet client
@@ -124,6 +132,10 @@
 #                                  type:array
 #
 # $server_git_repo_path::          Git repository path
+#
+# $server_git_branch_map::         Git branch to puppet env mapping for the
+#                                  default post receive hook
+#                                  type:hash
 #
 # $server_pre_hook_content::       Which template to use for git pre hook
 #
@@ -191,6 +203,16 @@
 #                                  Valid values are 'v2' for latest, and 'v1'
 #                                  for Foreman =< 1.2
 #
+# $server_ca_proxy::               The actual server that handles puppet CA.
+#                                  Setting this to anything non-empty causes
+#                                  the apache vhost to set up a proxy for all
+#                                  certificates pointing to the value.
+#
+# $allow_any_crl_auth::            Allow any authentication for the CRL. This
+#                                  is needed on the puppet CA to accept clients
+#                                  from a the puppet CA proxy.
+#                                  type:boolean
+#
 # === Usage:
 #
 # * Simple usage:
@@ -227,10 +249,13 @@ class puppet (
   $configtimeout               = $puppet::params::configtimeout,
   $ca_server                   = $puppet::params::ca_server,
   $classfile                   = $puppet::params::classfile,
+  $main_template               = $puppet::params::main_template,
   $agent_template              = $puppet::params::agent_template,
   $auth_template               = $puppet::params::auth_template,
   $nsauth_template             = $puppet::params::nsauth_template,
+  $allow_any_crl_auth          = $puppet::params::allow_any_crl_auth,
   $client_package              = $puppet::params::client_package,
+  $agent                       = $puppet::params::agent,
   $server                      = $puppet::params::server,
   $server_user                 = $puppet::params::user,
   $server_group                = $puppet::params::group,
@@ -254,6 +279,7 @@ class puppet (
   $server_manifest_path        = $puppet::params::server_manifest_path,
   $server_common_modules_path  = $puppet::params::server_common_modules_path,
   $server_git_repo_path        = $puppet::params::server_git_repo_path,
+  $server_git_branch_map       = $puppet::params::server_git_branch_map,
   $server_pre_hook_content     = $puppet::params::server_pre_hook_content,
   $server_pre_hook_name        = $puppet::params::server_pre_hook_name,
   $server_post_hook_content    = $puppet::params::server_post_hook_content,
@@ -265,6 +291,7 @@ class puppet (
   $server_certname             = $puppet::params::server_certname,
   $server_enc_api              = $puppet::params::server_enc_api,
   $server_report_api           = $puppet::params::server_report_api,
+  $server_ca_proxy             = $puppet::params::server_ca_proxy,
   $server_foreman_url          = $foreman::params::foreman_url,
   $server_foreman_ssl_ca       = $foreman::params::client_ssl_ca,
   $server_foreman_ssl_cert     = $foreman::params::client_ssl_cert,
@@ -278,22 +305,29 @@ class puppet (
   validate_bool($pluginsync)
   validate_bool($splay)
   validate_bool($agent_noop)
+  validate_bool($agent)
   validate_bool($server)
+  validate_bool($allow_any_crl_auth)
   validate_bool($server_ca)
   validate_bool($server_passenger)
   validate_bool($server_git_repo)
   validate_bool($server_service_fallback)
   validate_bool($server_facts)
 
+  validate_string($ca_server)
   validate_string($server_external_nodes)
+  validate_string($server_ca_proxy)
 
-  class { 'puppet::install': } ~>
-  class { 'puppet::config': } ->
-  Class['puppet']
+  include ::puppet::config
+  Class['puppet::config'] -> Class['puppet']
+
+  if $agent == true {
+    include ::puppet::agent
+    Class['puppet::agent'] -> Class['puppet']
+  }
 
   if $server == true {
-    class { 'puppet::server':
-      require => Class['puppet::config'],
-    }
+    include ::puppet::server
+    Class['puppet::server'] -> Class['puppet']
   }
 }

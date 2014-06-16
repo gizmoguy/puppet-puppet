@@ -2,29 +2,22 @@
 #
 # Set up the puppet server using passenger and apache.
 #
-class puppet::server::passenger {
-
-  include ::puppet::server::rack
-  include ::apache::ssl
-  include ::apache::params
-  include ::passenger
-
-  # mirror 'external' params here for easy use in templates.
-
-  $ssl_dir      = $::puppet::server_ssl_dir
-  $ssl_cert     = $::puppet::server::ssl_cert
-  $ssl_cert_key = $::puppet::server::ssl_cert_key
-  $ssl_ca_cert  = $::puppet::server::ssl_ca_cert
-  # We check to surpress some warnings.
-  if $::puppet::server_ca {
-    $ssl_chain    = $::puppet::server::ssl_chain
-    $ssl_ca_crl   = $::puppet::server::ssl_ca_crl
-  }
-
-  $port               = $::puppet::server_port
+class puppet::server::passenger (
+  $app_root           = $::puppet::server_app_root,
+  $passenger_max_pool = $::puppet::server_passenger_max_pool,
+  $port               = $::puppet::server_port,
+  $ssl_ca_cert        = $::puppet::server::ssl_ca_cert,
+  $ssl_ca_crl         = $::puppet::server::ssl_ca_crl,
+  $ssl_cert           = $::puppet::server::ssl_cert,
+  $ssl_cert_key       = $::puppet::server::ssl_cert_key,
+  $ssl_chain          = $::puppet::server::ssl_chain,
+  $ssl_dir            = $::puppet::server_ssl_dir,
+  $puppet_ca_proxy    = $::puppet::server_ca_proxy,
   $user               = $::puppet::server_user
-  $app_root           = $::puppet::server_app_root
-  $passenger_max_pool = $::puppet::server_passenger_max_pool
+) {
+  include ::puppet::server::rack
+  include ::apache
+  include ::apache::mod::passenger
 
   case $::operatingsystem {
     Debian,Ubuntu: {
@@ -38,13 +31,50 @@ class puppet::server::passenger {
     }
   }
 
-  file {'puppet_vhost':
-    path    => "${apache::params::configdir}/puppet.conf",
-    content => template('puppet/server/puppet-vhost.conf.erb'),
-    mode    => '0644',
-    notify  => Exec['reload-apache'],
-    before  => Service[$::puppet::server_httpd_service],
-    require => Class['::puppet::server::rack'],
+  $directories = [
+    {
+      'path'              => "${app_root}/public/",
+      'passenger_enabled' => 'On',
+    },
+  ]
+
+  # The following client headers allow the same configuration to work with Pound.
+  $request_headers = [
+    'set X-SSL-Subject %{SSL_CLIENT_S_DN}e',
+    'set X-Client-DN %{SSL_CLIENT_S_DN}e',
+    'set X-Client-Verify %{SSL_CLIENT_VERIFY}e',
+    'unset X-Forwarded-For',
+  ]
+
+  if $puppet_ca_proxy != '' {
+    include apache::mod::proxy
+    include apache::mod::proxy_http
+
+    $custom_fragment = "ProxyPassMatch ^/([^/]+/certificate.*)$ ${puppet_ca_proxy}/\$1"
+  } else {
+    $custom_fragment = ''
+  }
+
+  apache::vhost { 'puppet':
+    docroot           => "${app_root}/public/",
+    directories       => $directories,
+    port              => $port,
+    ssl               => true,
+    ssl_cert          => $ssl_cert,
+    ssl_key           => $ssl_cert_key,
+    ssl_ca            => $ssl_ca_cert,
+    ssl_crl           => $ssl_ca_crl,
+    ssl_chain         => $ssl_chain,
+    ssl_protocol      => '-ALL +SSLv3 +TLSv1',
+    ssl_cipher        => 'ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM:-LOW:-SSLv2:-EXP',
+    ssl_verify_client => 'optional',
+    ssl_options       => '+StdEnvVars +ExportCertData',
+    ssl_verify_depth  => '1',
+    ssl_proxyengine   => $puppet_ca_proxy != '',
+    custom_fragment   => $custom_fragment,
+    request_headers   => $request_headers,
+    options           => ['None'],
+    require           => Class['::puppet::server::rack'],
   }
 
 }

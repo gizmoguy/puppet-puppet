@@ -18,13 +18,20 @@ class puppet::params {
   $agent_noop          = false
   $show_diff           = false
   $configtimeout       = 120
-  $ca_server           = undef
+  $ca_server           = ''
   $classfile           = '$vardir/classes.txt'
 
   # Need your own config templates? Specify here:
-  $agent_template  = 'puppet/puppet.conf.erb'
+  $main_template   = 'puppet/puppet.conf.erb'
+  $agent_template  = 'puppet/agent/puppet.conf.erb'
   $auth_template   = 'puppet/auth.conf.erb'
   $nsauth_template = 'puppet/namespaceauth.conf.erb'
+
+  # Allow any to the CRL. Needed in case of puppet CA proxy
+  $allow_any_crl_auth = false
+
+  # Will this host be a puppet agent ?
+  $agent                     = true
 
   # Will this host be a puppetmaster?
   $server                    = false
@@ -38,6 +45,7 @@ class puppet::params {
   $server_external_nodes     = '/etc/puppet/node.rb'
   $server_enc_api            = 'v2'
   $server_report_api         = 'v2'
+  $server_ca_proxy           = ''
   $server_certname           = $::clientcert
 
   # Need a new master template for the server?
@@ -49,6 +57,8 @@ class puppet::params {
 
   # Set 'false' for static environments, or 'true' for git-based workflow
   $server_git_repo             = false
+  # Git branch to puppet env mapping for the post receive hook
+  $server_git_branch_map       = {}
 
   # Static environments config, ignore if the git_repo or dynamic_environments is 'true'
   # What environments do we have
@@ -107,9 +117,5 @@ class puppet::params {
   $puppetca_cmd = "${puppetca_path}/${puppetca_bin}"
 
   # Puppet service name
-  if $::operatingsystem == 'Fedora' and $::operatingsystemrelease >= 19 {
-    $service_name = 'puppetagent'
-  } else {
-    $service_name = 'puppet'
-  }
+  $service_name = 'puppet'
 }
